@@ -1,0 +1,156 @@
+\documentclass[12pt,fleqn]{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.7}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amsthm,amssymb,scrextend}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\DeclareMathOperator{\rng}{Rng}
+\DeclareMathOperator{\dom}{Dom}
+\newcommand{\R}{\mathbb R}
+\newcommand{\cont}{\subseteq}
+\newcommand{\N}{\mathbb N}
+\newcommand{\Z}{\mathbb Z}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{amsmath}
+\usepackage[mathscr]{euscript}
+\let\euscr\mathscr \let\mathscr\relax% just so we can load this and rsfs
+\usepackage[scr]{rsfso}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{multicol}
+\usepackage[colorlinks=true, pdfstartview=FitV, linkcolor=blue,
+citecolor=blue, urlcolor=blue]{hyperref}
+
+\DeclareMathOperator{\arcsec}{arcsec}
+\DeclareMathOperator{\arccot}{arccot}
+\DeclareMathOperator{\arccsc}{arccsc}
+\newcommand{\ddx}{\frac{d}{dx}}
+\newcommand{\dfdx}{\frac{df}{dx}}
+\newcommand{\ddxp}[1]{\frac{d}{dx}\left( #1 \right)}
+\newcommand{\dydx}{\frac{dy}{dx}}
+\let\ds\displaystyle
+\newcommand{\intx}[1]{\int #1 \, dx}
+\newcommand{\intt}[1]{\int #1 \, dt}
+\newcommand{\defint}[3]{\int_{#1}^{#2} #3 \, dx}
+\newcommand{\imp}{\Rightarrow}
+\newcommand{\un}{\cup}
+\newcommand{\inter}{\cap}
+\newcommand{\ps}{\mathscr{P}}
+\newcommand{\set}[1]{\left\{ #1 \right\}}
+
+\usepackage{enumerate} % enable \begin{enumerate}[1.]
+\renewcommand{\labelenumi}{\alph{enumi}.} %first level: (a),(b)
+\renewcommand{\labelenumii}{\roman{enumii}.} %second level: i,ii
+
+\theoremstyle{definition}
+\newtheorem*{sol}{Solution}
+\newtheorem*{claim}{Claim}
+\newtheorem{problem}{}
+% ---------------------------------------------------------------------------------------------
+\begin{document}
+\lhead{GLM}
+\chead{Zhijian Liu}
+\rhead{\today}
+
+<<include=FALSE>>=
+# Set global chunk options
+opts_chunk$set(echo = T,
+               warning = F,
+               message = F,
+               cache = T)
+invisible(lapply(c("knitr","kableExtra","tidyverse"),library, character.only=TRUE))
+source("/Users/liubeixi/Desktop/GLM/hw/Mine/HW09/HW09.R")
+@
+
+% Just put your proofs in between the \begin{proof} and the \end{proof} statements!
+
+\section*{Homework \#9}
+\texttt{\textbf{From Dobson \& Barnett, An Introduction to Generalized Linear Models, p. 202~205}}
+\begin{enumerate}[1.]
+	% 1.
+	  \item \textbf{Exercises 10.1. (skip d)} The data in Table 10.4 are survival times, in weeks, for leukemia patients. There is no censoring. There are two covariates, white blood cell count (WBC) and the results of a test (AG positive and AG negative). The data set is from Feigl and Zelen (1965) and the data for the 17 patients with AG positive test results are described in Exercise 4.2.
+	    \begin{enumerate}[(a)]
+	    % a.
+	      \item Obtain the empirical survivor functions $\hat{S}(y)$ for each group (AG positive and AG negative), ignoring WBC.
+<<1.a>>=
+df$censor <- 1
+KMfit <- survfit(Surv(`survival time`, censor)~AG, data=df)
+# Empirical Survival function
+summary(KMfit[1]) # AG = -
+summary(KMfit[2]) # AG = +
+@
+
+	    % b.
+	      \item Use suitable plots of the estimates $\hat{S}(y)$ to select an appropriate probability distribution to model the data. Plot the H(t) (H(t) = –log(S(t)), the cumulative hazard function) vs t, and log(H(t)) vs log(t).\\
+<<1.b, echo = FALSE>>=
+par(mfrow=c(1,2), pty="s")
+plot(KMfit[1]$time, -log(KMfit[1]$surv), main="Exponential", xlab="Time",
+     ylab="H=-Log(S)")
+points(KMfit[2]$time, -log(KMfit[2]$surv), pch=16, col=2)
+legend(c(0,0.1), c(2.9,3), legend=c("Control", "Treatment"), col=c(1,2), pch=c(1,16), box.lty=0, cex = 0.5, pt.cex = 1.4) # straight line starts from 0: good
+
+plot(log(KMfit[1]$time), log(-log(KMfit[1]$surv)), main="Weibull",
+     xlab="Log(Time)", ylab="Log(H)=Log(-Log(S))")
+points(log(KMfit[2]$time), log(-log(KMfit[2]$surv)),pch=16, col=2)
+legend(c(0.5,1), c(1,1.3), legend=c("Control", "Treatment"), col=c(1,2), pch=c(1,16), box.lty=0, cex = 0.5, pt.cex = 1.4) # parallel
+@
+
+	    % c.
+	      \item Use a parametric model to compare the survival times for the two groups, after adjustment for the covariate WBC, which is best transformed to log(WBC). Use the Exponential distribution. (If you start with the Weibull distribution, you will find that lambda is not significantly different from 1.) Be sure to include log(WBC) in the model as instructed in the exercise.
+<<1.c>>=
+reg <- survreg(Surv(`survival time`, censor) ~ AG + log(WBC), dist='exponential', data=df)
+summary(reg)
+predict.1 <- predict(reg, type="response", newdata = df[df$AG=="+",])
+predict.0 <- predict(reg, type="response", newdata = df[df$AG=="-",])
+summary(predict.0) # predicted survival time of negative AG
+summary(predict.1) # predicted survival time of positive AG
+@
+	      After adjutment for the covariate WBC, the survival time for the group of negative AG is far shorter than the group of positive AG.
+	    \end{enumerate}
+	    \begin{enumerate}[(e)]
+	    % e.
+	      \item Based on this analysis, is AG a useful prognostic indicator?
+	      Yes, it is.
+	    \end{enumerate}
+	% 2.
+	  \item \textbf{Exercises 10.6. (a)} The data in Table 10.5 are survival times, in months, of 44 patients with chronic active hepatitis. They participated in a randomized controlled trial of prednisolone compared with no treatment. There were 22 patients in each group. One patient was lost to follow-up and several in each group were still alive at the end of the trial. The data are from Altman and Bland (1998).
+	    \begin{enumerate}[(a)]
+	      \item Calculate the empirical survivor functions for each group.
+	      Notes:
+	        \begin{enumerate}[(1)]
+	          \item Consider the “loss to follow-up” as censoring.
+<<2.a.1>>=
+dt$status <- ifelse(dt$censor == 'loss to follow-up', 0, 1)
+kmfit <- survfit(Surv(`survival time`, status)~group, data=dt)
+# Empirical Survival function
+summary(kmfit[1]) # group=no treatment
+summary(kmfit[2]) # group=prednisolone
+@
+	          \item After you finish (a), use appropriate plots to consider whether Weibull or Exponential distribution will be appropriate.\\
+<<2.a.2, echo=FALSE>>=
+par(mfrow=c(1,2), pty="s")
+plot(kmfit[1]$time, -log(kmfit[1]$surv), main="Exponential", xlab="Time",
+     ylab="H=-Log(S)")
+points(kmfit[2]$time, -log(kmfit[2]$surv), pch=16, col=2)
+legend(c(0,0.1), c(3,3.3), legend=c("Control", "Treatment"), col=c(1,2), pch=c(1,16), box.lty=0, cex = 0.5, pt.cex = 1.4)
+# not straight line
+
+plot(log(kmfit[1]$time), log(-log(kmfit[1]$surv)), main="Weibull",
+     xlab="Log(Time)", ylab="Log(H)=Log(-Log(S))")
+points(log(kmfit[2]$time), log(-log(kmfit[2]$surv)),pch=16, col=2)
+legend(c(0.5,1), c(1,1.4), legend=c("Control", "Treatment"), col=c(1,2), pch=c(1,16), box.lty=0, cex = 0.5, pt.cex = 1.4)
+# not parallel
+@
+	          In the first plot, there is no straight line pattern, and no parallel patterns in the second plot. So the Weibull or Exponential distribution will not be appropriate.
+	          \item Regardless your answer to the above question, fit the data with using Weibull distributions. Is the lambda parameter significantly different from 1? (In general, AIC, BIC or Deviance can NOT be used to compare different distributional assumptions, because they depend on the likelihood functions. In this case, however, the Exponential distribution is a special case of Weibull distribution. Hence, the Deviance (LRT) may be used to compare Exponential vs Weibull distributions with minor modification. You do not have to do it though.)
+<<2.a.3>>=
+fit <- survreg(Surv(`survival time`, status) ~ group, dist='weibull', data=dt)
+summary(fit)
+@
+	          The $\lambda$ (scale) parameter is 0.824, not significantly different from 1.
+	        \end{enumerate}
+	    \end{enumerate}
+\end{enumerate}
+\end{document}

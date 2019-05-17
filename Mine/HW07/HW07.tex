@@ -1,0 +1,320 @@
+\documentclass[12pt,fleqn]{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+\let\hlipl\hlkwb
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.7}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amsthm,amssymb,scrextend}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\DeclareMathOperator{\rng}{Rng}
+\DeclareMathOperator{\dom}{Dom}
+\newcommand{\R}{\mathbb R}
+\newcommand{\cont}{\subseteq}
+\newcommand{\N}{\mathbb N}
+\newcommand{\Z}{\mathbb Z}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{amsmath}
+\usepackage[mathscr]{euscript}
+\let\euscr\mathscr \let\mathscr\relax% just so we can load this and rsfs
+\usepackage[scr]{rsfso}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{multicol}
+\usepackage[colorlinks=true, pdfstartview=FitV, linkcolor=blue,
+citecolor=blue, urlcolor=blue]{hyperref}
+
+\DeclareMathOperator{\arcsec}{arcsec}
+\DeclareMathOperator{\arccot}{arccot}
+\DeclareMathOperator{\arccsc}{arccsc}
+\newcommand{\ddx}{\frac{d}{dx}}
+\newcommand{\dfdx}{\frac{df}{dx}}
+\newcommand{\ddxp}[1]{\frac{d}{dx}\left( #1 \right)}
+\newcommand{\dydx}{\frac{dy}{dx}}
+\let\ds\displaystyle
+\newcommand{\intx}[1]{\int #1 \, dx}
+\newcommand{\intt}[1]{\int #1 \, dt}
+\newcommand{\defint}[3]{\int_{#1}^{#2} #3 \, dx}
+\newcommand{\imp}{\Rightarrow}
+\newcommand{\un}{\cup}
+\newcommand{\inter}{\cap}
+\newcommand{\ps}{\mathscr{P}}
+\newcommand{\set}[1]{\left\{ #1 \right\}}
+
+\usepackage{enumerate} % enable \begin{enumerate}[1.]
+\renewcommand{\labelenumi}{\alph{enumi}.} %first level: (a),(b)
+\renewcommand{\labelenumii}{\roman{enumii}.} %second level: i,ii
+
+\theoremstyle{definition}
+\newtheorem*{sol}{Solution}
+\newtheorem*{claim}{Claim}
+\newtheorem{problem}{}
+% ---------------------------------------------------------------------------------------------
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+\lhead{GLM}
+\chead{Zhijian Liu}
+\rhead{\today}
+
+
+
+% Just put your proofs in between the \begin{proof} and the \end{proof} statements!
+
+\section*{Homework \#7}
+% 1.
+	\begin{problem} \textit{\textbf{From Kutner et al., Applied Linear Regression Models, p. 609.}}\\[5pt]
+	Refer to the Pregnancy Duration Data (p. 609), repeat the analysis on p. 617 (the response variable is treated as Ordinal categorical and a proportional odds model is used) using R or other statistical software. Compare your results with the ones in the text (from Minitab). Are they the same? If not, what is the cause? Interpret the parameters in the context of the problem.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{df1}\hlopt{$}\hlstd{OrderedRes} \hlkwb{<-} \hlkwd{ordered}\hlstd{(df1}\hlopt{$}\hlstd{preg,} \hlkwd{c}\hlstd{(}\hlstr{"1"}\hlstd{,} \hlstr{"2"}\hlstd{,} \hlstr{"3"}\hlstd{))}
+\hlstd{polr_reg} \hlkwb{<-} \hlkwd{polr}\hlstd{(OrderedRes} \hlopt{~} \hlstd{.}\hlopt{-}\hlstd{preg}\hlopt{-}\hlstd{preg1}\hlopt{-}\hlstd{preg2}\hlopt{-}\hlstd{preg3,} \hlkwc{data}\hlstd{=df1 ,} \hlkwc{Hess}\hlstd{=T)}
+\hlkwd{summary}\hlstd{(polr_reg)}
+\end{alltt}
+\begin{verbatim}
+## Call:
+## polr(formula = OrderedRes ~ . - preg - preg1 - preg2 - preg3, 
+##     data = df1, Hess = T)
+## 
+## Coefficients:
+##            Value Std. Error t value
+## nutri    0.04887    0.01182   4.133
+## age1    -1.97601    0.57616  -3.430
+## age3    -1.36348    0.54648  -2.495
+## alcohol -1.66987    0.47537  -3.513
+## smoking -1.59154    0.45165  -3.524
+## 
+## Intercepts:
+##     Value   Std. Error t value
+## 1|2  2.9301  1.4929     1.9627
+## 2|3  5.0249  1.5445     3.2535
+## 
+## Residual Deviance: 173.5122 
+## AIC: 187.5122
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+  The signs of the coefficients are not the same because of different parameterization of two softwares. Keeping other predictors constant, as nutrition status increases 1 unit, the odds ratio that the mother is in a lower pregnancy category vs. a higher pregnancy category is $e^{-0.049} = 0.952$. After adjusted for other predictors, when a mother’s age change from age category 2 to age category 1, the odds of the mother is in a lower pregnancy category vs. a higher pregnancy category will change by a factor $e^{1.97601} = 7.214$. Similarly, interpretation for other parameters can be drawn according to the output.
+	\end{problem}
+% 2.
+  \begin{problem} \textit{\textbf{From Dobson \& Barnett, An Introduction to Generalized Linear Models, p. 163 Exercises 8.2 (c, d)}}\\[-20pt]
+  \begin{enumerate}[c.]
+  \item Do you think an ordinal model would be appropriate for associations between the levels of satisfaction and the other variables? Justify your answer. If you consider such a model to be appropriate, fit a suitable one and compare the results with those from (b).
+    \begin{itemize}
+      \item In part (c), use a proportional odds model without interaction. Then,
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{attach}\hlstd{(df2)}
+\hlstd{df2}\hlopt{$}\hlstd{OrderedRes} \hlkwb{<-} \hlkwd{ordered}\hlstd{(df2}\hlopt{$}\hlstd{satisfaction2,} \hlkwd{c}\hlstd{(}\hlstr{"1"}\hlstd{,} \hlstr{"2"}\hlstd{,} \hlstr{"3"}\hlstd{))}
+\hlstd{polr_reg_sat} \hlkwb{<-} \hlkwd{polr}\hlstd{(OrderedRes} \hlopt{~} \hlstd{contact} \hlopt{+} \hlstd{type,} \hlkwc{weights} \hlstd{= frequency,} \hlkwc{data} \hlstd{= df2)}
+\hlkwd{summary}\hlstd{(polr_reg_sat)}
+\end{alltt}
+\begin{verbatim}
+## Call:
+## polr(formula = OrderedRes ~ contact + type, data = df2, weights = frequency)
+## 
+## Coefficients:
+##                  Value Std. Error t value
+## contactlow     -0.2524    0.09306  -2.713
+## typeHouse      -0.2353    0.10521  -2.236
+## typeTowerBlock  0.5010    0.11675   4.291
+## 
+## Intercepts:
+##     Value   Std. Error t value
+## 1|2 -0.7488  0.0818    -9.1570
+## 2|3  0.3637  0.0801     4.5393
+## 
+## Residual Deviance: 3610.286 
+## AIC: 3620.286
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+        \begin{enumerate}[i.]
+          \item Conduct a Pearson goodness of fit test.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{df2} \hlopt{%>%}
+  \hlkwd{arrange}\hlstd{(type, contact)} \hlkwb{->} \hlstd{df2}
+\hlstd{observed}\hlkwb{<-}\hlkwd{matrix}\hlstd{(df2}\hlopt{$}\hlstd{frequency,} \hlkwc{byrow}\hlstd{=T,} \hlkwc{ncol}\hlstd{=}\hlnum{3}\hlstd{)}
+\hlstd{observed}
+\end{alltt}
+\begin{verbatim}
+##      [,1] [,2] [,3]
+## [1,]  141  116  191
+## [2,]  130   76  111
+## [3,]  130  105  104
+## [4,]   67   48   62
+## [5,]   34   47  100
+## [6,]   65   54  100
+\end{verbatim}
+\begin{alltt}
+\hlstd{df3} \hlkwb{<-} \hlstd{df2} \hlopt{%>%}
+  \hlkwd{group_by}\hlstd{(type, contact)} \hlopt{%>%}
+  \hlkwd{summarise}\hlstd{(}\hlkwc{n} \hlstd{=} \hlkwd{sum}\hlstd{(frequency))}
+\hlstd{df3} \hlkwb{<-} \hlstd{df3[}\hlkwd{rep}\hlstd{(}\hlkwd{row.names}\hlstd{(df3),} \hlkwc{each} \hlstd{=} \hlnum{3}\hlstd{),]}
+\hlstd{yhat}\hlkwb{<-}\hlkwd{predict}\hlstd{(polr_reg_sat,} \hlkwc{type}\hlstd{=}\hlstr{"probs"}\hlstd{)}\hlopt{*}\hlstd{df3}\hlopt{$}\hlstd{n}
+\hlstd{yhat}
+\end{alltt}
+\begin{verbatim}
+##            1         2         3
+## 1  120.71972 116.16444 211.11584
+## 2   99.78654 108.86302 239.35044
+## 3  120.71972 116.16444 211.11584
+## 4   70.60789  77.03031 169.36181
+## 5   85.41998  82.19671 149.38331
+## 6   70.60789  77.03031 169.36181
+## 7  128.27413  91.85073 118.87514
+## 8  108.84520  91.14175 139.01305
+## 9  128.27413  91.85073 118.87514
+## 10  56.83068  47.58728  72.58204
+## 11  66.97499  47.95746  62.06755
+## 12  56.83068  47.58728  72.58204
+## 13  78.75208  48.10424  54.14368
+## 14  67.76020  49.06122  64.17858
+## 15  78.75208  48.10424  54.14368
+## 16  81.98610  59.36137  77.65253
+## 17  95.28567  58.20348  65.51086
+## 18  81.98610  59.36137  77.65253
+\end{verbatim}
+\begin{alltt}
+\hlstd{expected}\hlkwb{<-}\hlstd{yhat[}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{6}\hlstd{)}\hlopt{*}\hlnum{3}\hlstd{, ]}
+\hlstd{expected}
+\end{alltt}
+\begin{verbatim}
+##            1         2         3
+## 3  120.71972 116.16444 211.11584
+## 6   70.60789  77.03031 169.36181
+## 9  128.27413  91.85073 118.87514
+## 12  56.83068  47.58728  72.58204
+## 15  78.75208  48.10424  54.14368
+## 18  81.98610  59.36137  77.65253
+\end{verbatim}
+\begin{alltt}
+\hlstd{rsp}\hlkwb{<-}\hlstd{(observed}\hlopt{-}\hlstd{expected)}\hlopt{/}\hlkwd{sqrt}\hlstd{(expected)}  \hlcom{# Standardized Pearson Residuals}
+\hlkwd{c}\hlstd{(}\hlstr{"PearsonChiSq"}\hlstd{=}\hlkwd{sum}\hlstd{(rsp}\hlopt{^}\hlnum{2}\hlstd{),} \hlstr{"df"} \hlstd{=} \hlnum{12}\hlopt{-}\hlnum{5}\hlstd{,} \hlstr{"p-value"}\hlstd{=} \hlnum{1}\hlopt{-}\hlkwd{pchisq}\hlstd{(}\hlkwd{sum}\hlstd{(rsp}\hlopt{^}\hlnum{2}\hlstd{),} \hlnum{12}\hlopt{-}\hlnum{5}\hlstd{))}
+\end{alltt}
+\begin{verbatim}
+## PearsonChiSq           df      p-value 
+##     157.2687       7.0000       0.0000
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+The p-value of the Pearson goodness of fit test is close to 0, so the model does not fit the data well.
+          \item Use Likelihood Ratio Test to test whether adding interaction improves the model.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{full} \hlkwb{<-} \hlkwd{polr}\hlstd{(OrderedRes} \hlopt{~} \hlstd{contact} \hlopt{*} \hlstd{type,} \hlkwc{weights} \hlstd{= frequency,} \hlkwc{data} \hlstd{= df2)}
+\hlstd{DevChi}\hlkwb{<-}\hlstd{polr_reg_sat}\hlopt{$}\hlstd{dev} \hlopt{-} \hlstd{full}\hlopt{$}\hlstd{dev}
+\hlkwd{c}\hlstd{(}\hlstr{"DevChiSq"}\hlstd{=DevChi,} \hlstr{"p-value"}\hlstd{=}\hlnum{1}\hlopt{-}\hlkwd{pchisq}\hlstd{(DevChi,} \hlnum{2}\hlstd{))}  \hlcom{# df=2}
+\end{alltt}
+\begin{verbatim}
+##   DevChiSq    p-value 
+## 6.19554642 0.04514963
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+        $H_0$: $log(\frac{P(y \leq j)}{1-P(y \leq j)}) = \alpha_j - (\beta_1X_1 + beta_2X_2)$\\
+        $H_A$: $log(\frac{P(y \leq j)}{1-P(y \leq j)}) = \alpha_j - (\beta_1X_1 + beta_2X_2 + beta_3X_1X_2)$\\
+        Where $j = 1, 2, \cdots, (J-1)$
+        The p-value for this test is $0.045 < 0.05$, so we reject the null hypothesis and conclude that adding interaction improves the model.
+        \end{enumerate}
+      \item Note that in this case, the proportional odds model with interaction is NOT the saturated model.
+    \end{itemize}
+  \item From the best model you obtained in (c), calculate the standardized residuals and use them to find where the largest discrepancies are between the observed frequencies and expected frequencies estimated from the model.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{rsp}
+\end{alltt}
+\begin{verbatim}
+##             1           2         3
+## 3   1.8458007 -0.01525710 -1.384451
+## 6   7.0680913 -0.11739107 -4.484572
+## 9   0.1523839  1.37201983 -1.364318
+## 12  1.3489644  0.05982826 -1.242095
+## 15 -5.0429215 -0.15921094  6.231970
+## 18 -1.8759599 -0.69586299  2.536007
+\end{verbatim}
+\begin{alltt}
+\hlstd{df2}
+\end{alltt}
+\begin{verbatim}
+##          type satisfaction contact satisfaction2 frequency OrderedRes
+## 1   Apartment          low    high             1       141          1
+## 2   Apartment       medium    high             2       116          2
+## 3   Apartment         high    high             3       191          3
+## 4   Apartment          low     low             1       130          1
+## 5   Apartment       medium     low             2        76          2
+## 6   Apartment         high     low             3       111          3
+## 7       House          low    high             1       130          1
+## 8       House       medium    high             2       105          2
+## 9       House         high    high             3       104          3
+## 10      House          low     low             1        67          1
+## 11      House       medium     low             2        48          2
+## 12      House         high     low             3        62          3
+## 13 TowerBlock          low    high             1        34          1
+## 14 TowerBlock       medium    high             2        47          2
+## 15 TowerBlock         high    high             3       100          3
+## 16 TowerBlock          low     low             1        65          1
+## 17 TowerBlock       medium     low             2        54          2
+## 18 TowerBlock         high     low             3       100          3
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+The prediction for the satisfaction of the house that is an apartment and has a low type contact has the largest discrepancy.
+
+  \end{enumerate}
+  \end{problem}
+\end{document}

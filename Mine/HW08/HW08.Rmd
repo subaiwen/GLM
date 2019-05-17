@@ -1,0 +1,163 @@
+---
+title: \Large\textbf{Homework \#8}
+fontsize: 11pt
+author: \normalsize{Zhijian Liu}
+geometry: margin=0.7in
+output: 
+  pdf_document: 
+    highlight: haddock
+    toc_depth: 1
+    df_print: kable
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+invisible(lapply(c("knitr","kableExtra","tidyverse","MASS"),library, character.only=TRUE))
+```
+\vspace{-0.5cm}
+#### 2. handout R08_PoissonLoglinear_2019.R.
+```{r 2 pre, indent="     ", echo=F}
+tumordata <- read.table("/Users/liubeixi/Desktop/GLM/hw/Mine/HW08/TumorData.txt", head=T)
+tumortable<-matrix(tumordata$count, ncol=3, byrow=T)
+colnames(tumortable)<-c("aHNK", "TNK", "EXT")
+rownames(tumortable)<-c("aHMF", "SSM", "NOD", "IND")
+```
+(a) What is the Deviance for GOF and its df in this case?
+```{r 2.a, indent="     "}
+tumorfit <- glm(count ~ type+site+type*site, family=poisson(link=log), data=tumordata)
+tumorfit2 <- glm(count ~ type+site, family=poisson(link=log), data=tumordata)
+tumorfit2$dev # Deviance for GOF
+```
+The deviance for GOF is 51.79501 and its df = 6.
+
+(b) How to test if type and site are independent?
+```{r 2.b, indent="     "}
+# option 1: contingency table chi2 test
+tumortable
+chisq.test(tumortable) # df = 6
+# option 2: Deviance GOF
+c("Deviance (LRT) GOF" = tumorfit2$dev, "p-value" = 1- pchisq(tumorfit2$dev, 6))
+# option 3: Pearson GOF
+pear<-residuals(tumorfit2, type="pearson")
+PGOF<-sum(pear^2)
+c("Pearson GOF" = PGOF, "p-value" = 1- pchisq(PGOF, 6))
+```
+    The p-values of the tests are closed to 0, so we reject the null hypotheses and conclude that type and site are not independent.  
+(c) What is the test statistic for global test of model significance and its df?
+```{r 2.c, indent="     "}
+G <- tumorfit2$null.dev-tumorfit2$dev
+c("Chi-square for model signficance"=G, "p-value"=1-pchisq(G, 5)) # df = 6-1
+```
+
+(d) How do we interpret the results?  
+    The p-value of the overall significance LRT is closed to 0, so at least one predictor has relationship with the occurrence rate.
+
+(e) What's the benefit of using Poisson (log-linear) over just using Chi-square for contingency table?
+    The advantage of log- linear modelling over the conventional chi-squared test for independence is that it provides a method for analyzing more complicated cross-tabulated data.
+    
+#### 3. Exercise 9.2
+```{r 3 pre, echo=F}
+df <- readxl::read_xls("/Users/liubeixi/Desktop/GLM/Data/GLM_data/Table 9.13 Car insurance.xls", skip = 2)
+# n: numbers of insurance policies
+# y: numbers of claims
+# car: cars in various insurance categories
+# age: age of policy holder
+# district: district where the policy holder lived (DIST = 1, for London and other major cities, and DIST = 0, otherwise)
+```
+
+(a) 
+
+```{r a, echo = F}
+df1 <- df %>% group_by(car) %>%
+  summarise(rate = sum(y)/sum(n))
+df2 <- df %>% group_by(age) %>%
+  summarise(rate = sum(y)/sum(n))
+df3 <- df %>% group_by(district) %>%
+  summarise(rate = sum(y)/sum(n))
+par(mfrow = c(1,3))
+plot(df1$car, df1$rate, xlab = "car", ylab = "rate")
+lines(df1$car, df1$rate)
+plot(df2$age, df2$rate, xlab = "age", ylab = "rate")
+lines(df2$age, df2$rate)
+plot(df3$district, df3$rate, xlab = "district", ylab = "rate")
+lines(df3$district, df3$rate)
+```
+
+(b)
+```{r 3.b, indent="     "}
+for (i in 1:3){df[,i] <- df[,i] %>% unlist() %>% as.factor()}
+full <- glm(y ~ car*age*district,family=poisson(link=log), offset = log(n),data=df)
+summary(full)
+```
+    Based on the result, all 3-way interaction terms and the 2-way interaction terms between district and two other predictors are not significant. So I drop all these insignificant interaction terms.
+(c)
+```{r 3.c, indent="     "}
+reg.b <- glm(y ~ car*age + district,family=poisson(link=log), offset = log(n), data=df) 
+for (i in 1:2){df[,i] <- df[,i] %>% unlist() %>% as.numeric()}
+reg <- glm(y ~ car+age+district,family=poisson(link=log),offset = log(n), data=df)
+summary(reg); summary(reg.b)
+```
+    This model is better than (b) based on its lower AIC, 201.05. Also this model is simpler, and therefore easier to interpret.  
+    
+#### 4. Exercise 9.3 (a, b)
+```{r 4 pre, echo=F}
+df <- readxl::read_xls("/Users/liubeixi/Desktop/GLM/Data/GLM_data/Table 9.6 Trial of influenza vaccine.xls", skip = 2)
+# treatment: new vaccine / saline placebo
+# response: titre levels of hemagglutinin inhibiting antibody found in the blood six weeks after vaccination
+# frequency: the number of subjects
+df[,3] <- df[,3] %>% unlist() %>% as.numeric()
+```
+
+(a)
+```{r 4.a, indent="     "}
+# conventional 
+df.mat <- matrix(df$frequency, ncol=3, byrow=T)
+colnames(df.mat)<-c("small", "moderate", "large")
+rownames(df.mat)<-c("placebo","vaccine")
+(df.mat.tm <- df.mat %>% rowSums())
+chisq.test(df.mat.tm)
+# poisson
+reg <- glm(frequency ~ treatment + response, family=poisson(link=log), data=df)
+summary(reg)
+```
+    The p-value for the test is 0.7256 > 0.05, so the distribution of responses is the same for the placebo and vaccine groups.
+
+(b)
+```{r 4.b, indent="     "}
+full <- glm(frequency ~ treatment * response, family=poisson(link=log), data=df)
+full$fitted.values # fitted value
+(dev <- full$deviance) # deviance residual & D
+(pear<-residuals(full, type="pearson")) # Pearson residual
+(X2<-sum(pear^2)) # X2
+df.mat
+which.max(pear^2) 
+c("X^2" = X2, "p-value" = 1- pchisq(X2, 2))
+```
+    The cell of small response with placebo contribute most to $X^2$. The small $X^2$ indicates the homogeneity of response. distributions.
+
+#### 5. Exercise 9.5
+```{r 5 pre, echo=F}
+df <- readxl::read_xls("/Users/liubeixi/Desktop/GLM/Data/GLM_data/Table 8.5 Housing conditions.xls", skip = 2)
+```
+(a)
+```{r 5.a, indent="     ", echo = F}
+reg.1 <- glm(frequency ~ contact*satisfaction, family=poisson(link=log), data=df[df$type==unique(df$type)[1],])
+reg.2 <- glm(frequency ~ contact*satisfaction, family=poisson(link=log), data=df[df$type==unique(df$type)[2],])
+reg.3 <- glm(frequency ~ contact*satisfaction, family=poisson(link=log), data=df[df$type==unique(df$type)[3],])
+summary(reg.1); summary(reg.2); summary(reg.3)
+```
+
+(b)
+```{r 5.b, indent="     "}
+poisson.reg <- glm(frequency ~ type+contact*satisfaction, family=poisson(link=log), data=df)
+summary(poisson.reg)
+```
+
+(c)
+```{r 5.c, indent="     "}
+reduced <- glm(frequency ~ type+contact+satisfaction, family=poisson(link=log), data=df)
+G <- reduced$deviance - poisson.reg$deviance
+c("Chi-square for LRT"=G, "p-value"=1-pchisq(G, 2)) # df = 6-1
+```
+    The p-value for the LRT is 0.077 > 0.05, so we fail to reject the null hypothesis, and remove the interaction term between contact and satisfaction. The result is different from what we obtained using ordinal logistic regression. But the p-values of two cases do not differ a lot, 0.077 and 0.045. So to some extent, they are closed to each other.
+
+

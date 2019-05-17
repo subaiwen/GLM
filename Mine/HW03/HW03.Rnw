@@ -1,0 +1,174 @@
+\documentclass[12pt,fleqn]{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.7}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amsthm,amssymb,scrextend}
+\usepackage{enumitem} % itemize indent
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\DeclareMathOperator{\rng}{Rng}
+\DeclareMathOperator{\dom}{Dom}
+\newcommand{\R}{\mathbb R}
+\newcommand{\cont}{\subseteq}
+\newcommand{\N}{\mathbb N}
+\newcommand{\Z}{\mathbb Z}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{amsmath}
+\usepackage[mathscr]{euscript}
+\let\euscr\mathscr \let\mathscr\relax% just so we can load this and rsfs
+\usepackage[scr]{rsfso}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{multicol}
+\usepackage[colorlinks=true, pdfstartview=FitV, linkcolor=blue,
+citecolor=blue, urlcolor=blue]{hyperref}
+
+\DeclareMathOperator{\arcsec}{arcsec}
+\DeclareMathOperator{\arccot}{arccot}
+\DeclareMathOperator{\arccsc}{arccsc}
+\newcommand{\ddx}{\frac{d}{dx}}
+\newcommand{\dfdx}{\frac{df}{dx}}
+\newcommand{\ddxp}[1]{\frac{d}{dx}\left( #1 \right)}
+\newcommand{\dydx}{\frac{dy}{dx}}
+\let\ds\displaystyle
+\newcommand{\intx}[1]{\int #1 \, dx}
+\newcommand{\intt}[1]{\int #1 \, dt}
+\newcommand{\defint}[3]{\int_{#1}^{#2} #3 \, dx}
+\newcommand{\imp}{\Rightarrow}
+\newcommand{\un}{\cup}
+\newcommand{\inter}{\cap}
+\newcommand{\ps}{\mathscr{P}}
+\newcommand{\set}[1]{\left\{ #1 \right\}}
+
+\renewcommand{\labelenumi}{\alph{enumi}.} %first level: (a),(b)
+\renewcommand{\labelenumii}{\roman{enumii}.} %second level: i,ii
+
+\theoremstyle{definition}
+\newtheorem*{sol}{Solution}
+\newtheorem*{claim}{Claim}
+\newtheorem{problem}{}
+% keep output staying in code chunks
+\usepackage{listings}
+\usepackage{inconsolata}
+% ---------------------------------------------------------------------------------------------
+\begin{document}
+\lhead{GLM}
+\chead{Zhijian Liu}
+\rhead{\today}
+
+<<echo=FALSE>>=
+# Set global chunk options
+opts_chunk$set(echo = F,
+               warning = F,
+               message = F,
+               cache = T,
+               tidy = T)
+# keep output staying in code chunks
+  # options(width=60)
+  #
+  # listing <- function(x, options) {
+  #   paste("\\begin{lstlisting}[basicstyle=\\ttfamily,breaklines=true]\n",
+  #     x, "\\end{lstlisting}\n", sep = "")
+  # }
+  # knit_hooks$set(source=listing, output=listing)
+@
+
+% Just put your proofs in between the \begin{proof} and the \end{proof} statements!
+
+\section*{Homework \#3}
+% 1.
+	\begin{problem} (14.20) Refer to Flu shots Problem 14.14.
+		\begin{enumerate}
+		% a.
+  			\item Obtain joint confidence intervals for the age odds ratio $exp(30\beta_1)$ for male clients whose ages differ by 30 years and for the health awareness index odds ratio $exp(25\beta_2)$ for male clients whose health awareness index differs by 25, with family confidence coefficient of approximately .90. Interpret your intervals.
+<<1.a>>=
+df <- read.table("/Users/liubeixi/Desktop/GLM/Data/GLM_sample_txt/CH14PR14.txt")
+colnames(df) <- c("Y","X1","X2","X3")
+# Y: recieve flu shot or not
+# X1: age
+# X2: health awareness
+# X3: male = 1
+attach(df)
+reg <- glm(Y~X1+X2+as.factor(X3), family = binomial(link=logit),data=df)
+alpha <- 1 - 0.9
+g <- 2
+a <- alpha/g
+exp(30*confint(reg, level = (1-a))) # CI for odds ratio
+exp(25*confint(reg, level = (1-a)))
+@
+
+Under the Bonferroni method with family confidence level of 0.9, the confidence interval for $exp(30\beta_1)$ is (1.559, 57.442). That means, keeping health awareness the same, when the age of male clients differ by 30 years, the odd ratio of recieving flu shot range from 1.559 and 57.442. The 90\% confidence interval for $exp(25\beta_2)$ is (0.014, 0.389). That means, keeping age the same, when health awareness index of male clients differs by 25, the odd ratio of recieving flu shot range from 0.014 and 0.389.
+
+  	% b.
+			  \item Use the Wald test to determine whether $X_3$, client gender, can be dropped from the regression model; use $\alpha = .05$. State the alternatives, decision rule, and conclusion. What is the approximate P-value of the test?
+<<1.b>>=
+summary(reg)
+@
+          \begin{itemize}[leftmargin=0.15in]
+            \item $H_0$: $\beta_3 = 0$\\
+                  $H_A$: $\beta_3 \neq 0$
+            \item Decision rule: If p-value $> 0.05$, do not reject the null hypothesis. If p-value $< 0.05$, reject the null hypothesis.
+            \item Conclusion: From the output, p-value for $\beta_3$ is $0.40558 > 0.05$. So we fail to reject the null hypothesis, and conclude that client gender cannot be saved in the regression model.
+          \end{itemize}
+		% c.
+		    \item Use the likelihood ratio test to determine whether $X_3$, client gender, can be dropped from the regression model; use $\alpha$ = .05. State the full and reduced models, decision rule, and conclusion. What is the approximate P-value of the test? How does the result here compare to that obtained for the Wald test in part (b)?
+<<1.c>>=
+full <- reg
+reduce <- glm(Y~X1+X2, family = binomial(link=logit), data=df)
+G2 <- reduce$dev - full$dev
+c('G2' = G2, 'p-value' = 1-pchisq(G2, 1))
+@
+          \begin{itemize}[leftmargin=0.15in]
+            \item $H_0$: $\beta_3 = 0$\\
+                  $H_A$: $\beta_3 \neq 0$
+            \item Decision rule: If p-value $> 0.05$, do not reject the null hypothesis. If p-value $< 0.05$, reject the null hypothesis.
+            \item Conclusion: From the output, p-value for $\beta_3$ is $0.4020417 > 0.05$. So we fail to reject the null hypothesis, and conclude that client gender can be dropped from the regression model.
+          \end{itemize}
+        The result of the likelihood ratio test is essentially the same as the result from the Wald test.
+		% d.
+		    \item Use the likelihood ratio test to delermine whether the following three second-order terms, the square of age, the square of health awareness index, and the two-factor interaction effect betwecn age and health awareness index, should be added simultaneously to the regression model containing age and health awareness index first-order terms; use $\alpha=.05$ State the alternatives. Full and reduced models, decision rule, and conclusion. What is the approximate P-value of the test?
+<<1.d>>=
+reduce <- glm(Y~X1+X2, family = binomial(link=logit), data=df)
+full <- glm(Y~X1+X2+I(X1^2)+I(X2^2)+X1:X2 , family = binomial(link=logit), data=df)
+G2 <- reduce$dev - full$dev
+c('G2' = G2, 'p-value' = 1-pchisq(G2, 3))
+@
+          \begin{itemize}[leftmargin=0.15in]
+            \item Full model: $$log\frac{\pi}{1-\pi} = \beta_0 + \beta_1 \cdot (age) + \beta_2 \cdot (health) + \beta_3 \cdot (age)^2 + \beta_4 \cdot (health)^2 + \beta_5 \cdot (age) \cdot (health)$$
+                  Reduced model:
+                  \begin{equation*}\hspace*{-1cm} log\frac{\pi}{1-\pi} = \beta_0 + \beta_1 \cdot (age) + \beta_2 \cdot (health) \end{equation*}
+            \item $H_0$: $\beta_3 = \beta_4 = \beta_5 =0$\\
+                  $H_A$: ALOI
+            \item Decision rule: If p-value $> 0.05$, do not reject the null hypothesis. If p-value $< 0.05$, reject the null hypothesis.
+            \item Conclusion: From the output, p-value is $0.6744562 > 0.05$. So we fail to reject the null hypothesis, and conclude that the three second-order terms can not be added simultaneously to the regression model.
+          \end{itemize}
+			\end{enumerate}
+	\end{problem}
+% 2.
+  \begin{problem} (14.22) Refer to Flu shots Problem 14.14 where the pool of predictors consists of all first-order terms and all second-order terms in age and health awareness index.
+    \begin{enumerate}
+      \setcounter{enumi}{2}
+      \item Find the best model according to the $AIC_p$ criterion.
+<<2.c, echo=T>>=
+full <- glm(Y~X1+X2+I(X1^2)+I(X2^2)+X1:X2,
+            family = binomial(link=logit), data = df)
+step(full,direction="both")
+@
+% forward
+% reg.null<- glm(shot~1,family=binomial(link=logit),data=mydataname)
+% step(reg.null, scope=list(lower=~1, upper=~age+aware+gender+I(age^2)+I(aware^2)+age*aware), direction="forward")
+      The best model is: $$log\frac{\pi}{1-\pi} = \beta_0 + \beta_1 \cdot (age) + \beta_2 \cdot (health)$$
+      \item Find the best model according to the $SBC_p$ criterion.
+<<2.d, echo=T>>=
+n <- nrow(df)
+step(full,direction="both", k=log(n))
+@
+      The best model is same as that of (c): $$log\frac{\pi}{1-\pi} = \beta_0 + \beta_1 \cdot (age) + \beta_2 \cdot (health)$$
+    \end{enumerate}
+  \end{problem}
+% 3.
+  \begin{problem}
+  I received \underline{45} points in HW \#1.
+  \end{problem}
+\end{document}

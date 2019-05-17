@@ -1,0 +1,199 @@
+---
+title: \Large\textbf{Homework \#5}
+fontsize: 11pt
+author: \normalsize{Zhijian Liu}
+geometry: margin=0.7in
+output: 
+  pdf_document: 
+    highlight: haddock
+    toc_depth: 1
+    df_print: kable
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+invisible(lapply(c("knitr","kableExtra","tidyverse","ISLR"),library, character.only=TRUE))
+```
+\vspace{-1.0cm}
+#### 14.28 
+  b. Using the groups formed in part (a), conduct a Hosmer-Lemeshow goodness of fit test for the appropriateness of the logistic function; use $\alpha =.05$. State the alternatives, decision rule, and conclusions. What is the P-value of the test?\newline
+  \vspace{0.3cm}
+  The model obtained in part (d) of Problem 14.22:
+$$log\frac{\pi}{1-\pi} = \beta_0 + \beta_1 \cdot (age) + \beta_2 \cdot (health)$$
+```{r 14.28 pre, indent="     "}
+df <- read.table('/Users/liubeixi/Desktop/GLM/Data/GLM_sample_txt/CH14PR14.txt', header = F)
+colnames(df) <- c('Y', 'X1', 'X2', 'X3')
+# Y: receive a flu shot (1/0)
+# X1: age
+# X2: health awareness index
+# X3: male (1), female (0)
+```
+```{r 14.28 b, indent="     ", echo = T}
+# Model & yhat
+reg <- glm(formula = Y ~ X1 + X2, family = binomial(link = logit), data = df)
+p.hat <- reg$fitted
+# Hosmer-Lemeshow procedure
+hosmerlem<-function(y, yhat, g = 10){
+  # p.hat -> (quantile, quantile)
+  cutyhat <- cut(yhat, breaks = quantile(yhat, probs = seq(0, 1, 1/g)),
+                 include.lowest = T) # 0.1384917 -> (0.0998,0.149]
+  # within each group, count number of success and failure
+  obs <- xtabs(cbind(1 - y, y) ~ cutyhat)
+  # within each group, calculate expected amount of success and failure
+  expect <- xtabs(cbind(1 - yhat, yhat) ~ cutyhat)
+  # chi-square statistics
+  chisq <- sum((obs - expect)^2/expect)
+  # p-value
+  P <- 1 - pchisq(chisq, g - 2)
+  # outupt
+  c("X^2" = chisq, Df = g - 2, "P(>Chi)" = P)
+}
+# Hosmer-Lemeshow goodness of fit test
+hosmerlem(df$Y, p.hat, g=8)
+```
+  + $H_0: log\frac{\pi}{1-\pi} = \beta_0 + \beta_1 \cdot (age) + \beta_2 \cdot (health)$ \newline
+    $H_A: log\frac{\pi}{1-\pi} \neq \beta_0 + \beta_1 \cdot (age) + \beta_2 \cdot (health)$
+  + Decision rule:\newline
+  If p-value $<$ 0.05, reject the null hypothesis and conclude that the model is not a good fit of the data.\newline
+  If p-value $>$ 0.05, fail to reject the null hypothesis and conclude that the model is a good fit of the data.
+  + Conclusion: p-value obtained from the Hosmer-Lemeshow goodness of fit test is $0.06263 > 0.05$. So we fail to reject the null hypothesis and conclude that the model is a good fit of the data.
+
+#### 14.24
+  a. Refer to **Toxicity experiment** Problem 14.12. Use the groups given there to conduct a deviance goodness of fit test of the appropriateness of logistic regression model (14.20). Control the risk of a Type I error at .01. State the alternatives, decision rule, and conclusion.\newline
+  \vspace{-0.8cm}
+  \hspace{0.7cm} - \hspace{0.15cm}In addition, conduct a Pearson Chi-square goodness of fit test at $\alpha=0.01$.\newline
+  \vspace{0.3cm}
+```{r 14.24}
+df <- read.table("/Users/liubeixi/Desktop/GLM/Data/GLM_sample_txt/CH14PR12.txt")
+colnames(df) <- c("X","n","Y")
+# Y: the number of insects that died out of the 250 (n) in the group
+# n: the number of insects in the group (j)
+# X: the does level administrated to the insects
+```
+```{r 14.24 1, indent="     ",echo = T}
+# model
+reg <- glm(Y/n~X, family = binomial(link=logit), weight = n, data = df)
+# deviance goodness of fit test
+c("X^2" = reg$dev, 
+  Df = nrow(df)-2,
+  "P(>Chi)" = 1-pchisq(reg$dev, df=nrow(df)-2))
+```
+  + $H_0: log\frac{\pi}{1-\pi} = \beta_0 + \beta_1 \cdot (dose.lv)$ \newline
+    $H_A: log\frac{\pi}{1-\pi} \neq \beta_0 + \beta_1 \cdot (dose.lv)$
+  + Decision rule:\newline
+  If p-value $<$ 0.05, reject the null hypothesis and conclude that the model is not a good fit of the data.\newline
+  If p-value $>$ 0.05, fail to reject the null hypothesis and conclude that the model is a good fit of the data.
+  + Conclusion: p-value obtained from the deviance goodness of fit test is $0.8356191 > 0.01$. So we fail to reject the null hypothesis and conclude that the model is a good fit of the data.
+  
+```{r 14.24 2, indent="     ", echo = T}
+# Pearson Chi-square Procedure(counts data only)
+pgof<-function(n, y, pihat, p){
+  # observed number of success
+  Oy<-y
+  # observed number of failure
+  On<-n-y
+  # expected number of success
+  Ey<-n*pihat
+  # expected number of failure
+  En<-n*(1-pihat)
+  # chi-square statistics
+  chisq<-sum((Oy-Ey)^2/Ey) + sum((On-En)^2/En)
+  # p-value
+  pvalue <- 1 - pchisq(chisq, length(n)-p)
+  # output
+  c("X^2" = chisq, Df = length(n)-p, "P(>Chi)" = pvalue)
+}
+# Pearson Chi-square goodness of fit test
+pgof(df$n, df$Y, reg$fitted, 2)
+```
+  The result from Pearson Chi-square goodness of fit test is very closed to that of the deviance goodness of fit test with p-value = 0.8351462. So the Pearson Chi-square goodness of fit test also validates fitness of the model.
+  
+#### 14.36 
+```{r 14.36 pre, indent="     "}
+df <- read.table('/Users/liubeixi/Desktop/GLM/Data/GLM_sample_txt/CH14PR14.txt', header = F)
+colnames(df) <- c('Y', 'X1', 'X2', 'X3')
+# Y: receive a flu shot (1/0)
+# X1: age
+# X2: health awareness index
+# X3: male (1), female (0)
+```
+  b. A prediction rule is to be based on the fitted regression function in Problem 14.14a. For the sample cases, find the total error rate, the error rate for clients receiving the flu shot, and the error rate for clients not receiving the flu shot for the following cutoffs: .05, .10, .15, .20.
+```{r 14.36 b, indent="     "}
+reg <- glm(formula = Y ~ X1 + X2 + X3, family = binomial(link = logit), data = df)
+cutoff <- c(0.05, 0.1, 0.15, 0.2)
+TER <- FNR <- FPR <- rep(NA, length(cutoff))
+p <- predict(reg, df, type="response")
+for(i in 1:length(cutoff)){
+  prediction <- ifelse(p > cutoff[i], 1, 0)
+  FNR[i] <- sum(prediction == 0 & df$Y  == 1)/sum(df$Y  == 1)
+  FPR[i] <- sum(prediction == 1 & df$Y  == 0)/sum(df$Y  == 0)
+  TER[i] <- mean(prediction != df$Y)
+}
+# output
+data.frame('cutoff' = cutoff,
+           'Total Error Rate' = TER,
+           'False Positive Rate' = FPR,
+           'False Negative Rate' = FNR) 
+```
+  The total error rate, the error rate for clients receiving the flu shot (False Positive Rate), and the error rate for clients not receiving the flu shot (False Negative Rate) for 4 different cutoffs are listed as above.
+  
+  c. Based on your results in part(b), which cutoff minimizes the total error rate? Are the error rates for clients receiving the flu shot and for clients not receiving the flu shot fairly balanced at this cutoff? Obtain the area under the ROC curve to assess the model's predictive power here. What do you conclude?\newline
+  \vspace{0.3cm}
+  From part(b), cutoff = 0.2 minimizes the total error rate, but the error rates for clients receiving the flu shot and for clients not receiving the flu shot are not balanced in this situation.
+  
+```{r 14.36 c, indent="     ", echo = F}
+roc.analysis <-function (object, newdata = NULL, newplot=TRUE) {
+  if (is.null(newdata)) {
+    pi.tp <- object$fitted[object$y == 1]
+    pi.tn <- object$fitted[object$y == 0]
+  }
+  else {
+    pi.tp <- predict(object, newdata, type = "response")[newdata$y == 1]
+    pi.tn <- predict(object, newdata, type = "response")[newdata$y == 0]
+  }
+
+  pi.all <- sort(c(pi.tp, pi.tn))
+  sens <- rep(1, length(pi.all)+1)
+  specc <- rep(1, length(pi.all)+1)
+  for (i in 1:length(pi.all)) {
+    sens[i+1] <- mean(pi.tp >= pi.all[i], na.rm = T)
+    specc[i+1] <- mean(pi.tn >= pi.all[i], na.rm = T)
+  } 
+  
+  npoints <- length(sens)
+  area <- sum(0.5 * (sens[-1] + sens[-npoints]) * (specc[-npoints] - 
+        specc[-1]))
+  lift <- (sens - specc)[-1] 
+  cutoff <- pi.all[lift == max(lift)][1] # cutoff that make largest difference between spec and sens
+  sensopt <- sens[-1][lift == max(lift)][1]
+  specopt <- 1 - specc[-1][lift == max(lift)][1]
+
+  if (newplot){
+  plot(specc, sens, xlim = c(0, 1), ylim = c(0, 1), type = "s", 
+            xlab = "1-specificity", ylab = "sensitivity", main="ROC")
+  abline(0, 1)
+  }
+  else lines(specc, sens, type="s", lty=2, col=2)
+
+  list(pihat=as.vector(pi.all), sens=as.vector(sens[-1]), 
+  spec=as.vector(1-specc[-1]), area = area, cutoff = cutoff,
+  sensopt = sensopt, specopt = specopt)
+}
+
+trainingROC <- roc.analysis(reg)
+cbind( 'AUR' = trainingROC[[4]]) # area
+```
+  The ROC curve is shown as above, and the area under the curve is 0.8223765, which indicates a high predictive power.  
+  
+  d. How can you establish whether the observed total error rate for the best cutoff in part (c) is a reliable indicator of the predictive ability of the fitted regression function and the chosen cutoff?\newline
+```{r 14.36 d, indent="     "}
+c <- trainingROC[[5]] %>% as.numeric()# best cutoff
+prediction.c <- ifelse(p > c, 1, 0)
+# output
+data.frame('cutoff' = c,
+           'Total Error Rate' = mean(prediction.c != df$Y),
+           'False Negative Rate' = sum(prediction.c == 0 & df$Y  == 1)/sum(df$Y  == 1),
+           'False Positive Rate' = sum(prediction.c == 1 & df$Y  == 0)/sum(df$Y  == 0))
+```
+  No, even the best cutoff has a higher total error rate than an unreliable cutoff, 0.2 in part (c) for instance. Moreover, the total error rate cannot show the predictive ability of the fitted model. We use area under ROC instead to show the predictive ability. So, the observed total error rate is not a reliable indicator.
+
+

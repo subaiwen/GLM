@@ -1,0 +1,187 @@
+---
+title: "HW02"
+author: "Zhijian Liu"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 1. (Kutner et al, Problem 14.4)
+#### a. 
+Logistic mean response function:$E(Y_i)=\pi_i=F_L(\beta_0+\beta_1X_i)=\frac{exp(\beta_0+\beta_1X_i)}{1+exp(\beta_0+\beta_1X_i)}$
+
+```{r 1.a, echo=F }
+beta.0 <- -25
+beta.1 <- 0.2
+curve(exp(beta.0+beta.1*x)/(1+exp(beta.0+beta.1*x)), 50, 200, ylab = expression(pi))
+```
+
+#### b.
+```{r 1.b}
+logit <- function(p){log(p/(1-p))}
+linear.component <- function(x){beta.0+beta.1*x}
+GoFKernel::inverse(linear.component)(logit(0.5)) #inverse function
+```
+
+#### c.
+```{r 1.c}
+odds.1 <- exp(linear.component(150))
+odds.2 <- exp(linear.component(151))
+ratio.odds <- odds.2/odds.1
+ratio.odds
+exp(beta.1)
+```
+
+They are the same.
+
+### 2. (Kutner et al, Problem 14.6)
+#### a.
+Probit mean response function:$E(Y_i)=\pi_i=\Phi(\beta_0+\beta_1X_i)$
+
+```{r 2.a, echo=FALSE}
+curve(pnorm(linear.component(x)), 100, 150, ylab = expression(pi),main = bquote(beta[0]~'='~-25~','~beta[1]~'='~0.2), col = 2)
+curve(exp(beta.0+beta.1*x)/(1+exp(beta.0+beta.1*x)), col = 3, add = TRUE)
+legend(100, 0.9, box.lty=0, legend = c('probit', 'logit'), col = c(2,3), lty =1)
+```
+
+The logistic curve is smoother and have a more constant marginal effect.
+
+#### b.
+```{r 2.b}
+GoFKernel::inverse(linear.component)(GoFKernel::inverse(pnorm)(0.5))
+#GoFKernel::inverse(linear.component)(qnorm(0.5)
+```
+
+### 3. (Kutner et al, Problem 14.7)
+```{r 3, include=FALSE}
+df <- read.table("/Users/liubeixi/Desktop/GLM/Data/GLM_sample_txt/CH14PR07.txt")
+colnames(df) <- c("Y","X")
+attach(df)
+```
+
+#### a.
+```{r 3.a, echo = FALSE}
+reg <- glm(Y~X, family = binomial(link=logit))
+reg
+```
+Fitted response function: $\hat{\pi}=\frac{exp(-4.8+0.125X)}{1+exp(-4.8+0.125X)}$
+
+#### b.
+```{r 3.b, echo=FALSE}
+loes <- loess(Y~X)
+plot(X,Y,pch =20)
+points(X, reg$fitted, col = 2, pch = 20)
+points(X, loes$fitted, col =3, pch = 20)
+legend(30, 0.8, box.lty=0, legend = c('observations', 'logistic', 'lowess'), col = c(1,2,3), pch = 20)
+```
+
+It appears to be a good fit.
+
+#### c.
+```{r 3.c}
+data.frame("exp(b1)"=exp(coef(reg)[2]))
+```
+$e^{\beta_1}$ = 0.125. Every unit of increase in dues would cause the odds of not renewing the membership will change by a multiplier of 0.125.
+
+#### d.
+```{r 3.d, echo=F}
+p <- exp(coef(reg)[1] + coef(reg)[2]*40)/(1+exp(coef(reg)[1] + coef(reg)[2]*40))
+names(p) <- expression(pi)
+p
+```
+If the dues are increased by $40, the estimated probability that association members will not renew their membership is 0.5487.
+
+#### e.
+```{r 3.e, echo=F}
+x.hat <- (logit(0.75) - coef(reg)[1])/(coef(reg)[2])
+names(x.hat) <- "X"
+x.hat
+detach(df)
+```
+The amount of dues increase for which 75 percent of the members are expected not to renew their association membership is 47.219.
+
+### 4. (Kutner et al, Problem 14.12)
+```{r 4, include=F}
+df <- read.table("/Users/liubeixi/Desktop/GLM/Data/GLM_sample_txt/CH14PR12.txt")
+colnames(df) <- c("X","n","Y")
+attach(df)
+```
+#### a.
+```{r 4.a, echo = F}
+plot(X, Y/n)
+```
+
+The plot to some extent follows a S shape, so the logistic response function can be appropriate.
+
+#### b.
+```{r 4.b, echo=F}
+reg <- glm(Y/n~X, family = binomial(link=logit), weight = n)
+reg
+```
+Fitted response function: $\hat{mortality\;rate}=\frac{exp(-2.644+0.674X)}{1+exp(-2.644+0.674X)}$
+
+#### c.
+```{r 4.c, echo=F}
+plot(X, Y/n)
+points(X, reg$fitted, cex = 1.5, pch = 20)
+legend(1, 0.8, box.lty=0, legend = c('proportion', 'logistic'), pch = c(1,20))
+```
+
+The fitted logistic response function appear to fit well.
+
+#### d.
+```{r 4.d, echo=F}
+data.frame("exp(b1)"=exp(coef(reg)[2]))
+```
+$e^{\beta_1}$ = 1.96. Every unit of increase in the dose level would cause the odds of mortality will change by a multiplier of 1.96.
+
+#### e.
+```{r 4.e, echo=F}
+p <- exp(coef(reg)[1] + coef(reg)[2]*3.5)/(1+exp(coef(reg)[1] + coef(reg)[2]*3.5))
+names(p) <- expression(pi)
+p
+```
+When the dose level is 3.5, the estimated probability that an insect dies is 0.429.
+
+#### f.
+```{r 4.f, echo=F}
+x.hat <- (logit(0.5) - coef(reg)[1])/(coef(reg)[2])
+names(x.hat) <- "X"
+x.hat
+detach(df)
+```
+The estimated median lethal dose is 3.922.
+
+### 5. (Kutner et al, Problem 14.14)
+```{r 5, include=F}
+df <- read.table("/Users/liubeixi/Desktop/GLM/Data/GLM_sample_txt/CH14PR14.txt")
+colnames(df) <- c("Y","X1","X2","X3")
+attach(df)
+```
+#### a.
+```{r 5.a, echo=F}
+reg <- glm(Y~X1+X2+as.factor(X3), family = binomial(link=logit),data=df)
+reg
+```
+Fitted response function: $\hat{\pi}=\frac{exp(-1.177+0.0728X_1-0.099X_2+0.434I_{X_3=1})}{1+exp(-1.177+0.0728X_1-0.099X_2+0.434I_{X_3=1})}$
+
+#### b.
+```{r 5.b, echo=F}
+ef <- c(exp(coef(reg)[2]),exp(coef(reg)[3]),exp(coef(reg)[4]))
+names(ef) <- c("exp(b1)","exp(b2)","exp(b3)")
+ef
+```
+
+- Keeping other factors constant, every unit of increase in age would cause the odds of receiving a flu shor will change by a multiplier of 1.0755.  
+- Keeping other factors constant, every unit of increase in health awareness would cause the odds of receiving a flu shor will change by a multiplier of 0.906.  
+- Keeping other factors constant, for a male the odds of receiving a flu shor will higher than that for a female by 0.0755.
+
+#### c.
+```{r 5.c, echo=F}
+p <- as.numeric(exp(coef(reg) %*% c(1,55,60,1))/(1+exp(coef(reg) %*% c(1,55,60,1))))
+names(p) <- expression(pi)
+p
+```
+The estimated probability that male clients aged 55 with a health awareness index of 60 will receive a flu shot is 0.064.

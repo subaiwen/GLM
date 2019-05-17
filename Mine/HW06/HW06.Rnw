@@ -1,0 +1,94 @@
+\documentclass[12pt,fleqn]{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.7}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amsthm,amssymb,scrextend}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\DeclareMathOperator{\rng}{Rng}
+\DeclareMathOperator{\dom}{Dom}
+\newcommand{\R}{\mathbb R}
+\newcommand{\cont}{\subseteq}
+\newcommand{\N}{\mathbb N}
+\newcommand{\Z}{\mathbb Z}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{amsmath}
+\usepackage[mathscr]{euscript}
+\let\euscr\mathscr \let\mathscr\relax% just so we can load this and rsfs
+\usepackage[scr]{rsfso}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{multicol}
+\usepackage[colorlinks=true, pdfstartview=FitV, linkcolor=blue,
+citecolor=blue, urlcolor=blue]{hyperref}
+
+\usepackage{enumerate} % enable \begin{enumerate}[1.]
+\renewcommand{\labelenumi}{\alph{enumi}.} %first level: (a),(b)
+\renewcommand{\labelenumii}{\roman{enumii}.} %second level: i,ii
+
+\theoremstyle{definition}
+\newtheorem*{sol}{Solution}
+\newtheorem*{claim}{Claim}
+\newtheorem{problem}{}
+% ---------------------------------------------------------------------------------------------
+\begin{document}
+\lhead{GLM}
+\chead{Zhijian Liu}
+\rhead{\today}
+
+<<include=FALSE>>=
+# Set global chunk options
+opts_chunk$set(echo = T,
+               warning = F,
+               message = F,
+               cache = T)
+invisible(lapply(c("knitr","kableExtra","tidyverse"),library, character.only=TRUE))
+source("/Users/liubeixi/Desktop/GLM/hw/Mine/HW06/HW06.R")
+@
+
+% Just put your proofs in between the \begin{proof} and the \end{proof} statements!
+
+\section*{Homework \#6}
+\begin{enumerate}[1.]
+  \setcounter{enumi}{1}
+  % 2.
+    \item Refer to the Pregnancy Duration Data (p. 609), repeat the analysis on p.613 (the response variable is treated as Nominal categorical) using R or other statistical software. Compare your results with the ones in the text (from Minitab). Are they the same? If not, what is the cause? Interpret the parameters in the context of the problem.
+<<2>>=
+reg2 <- multinom(cbind(preg3,preg2,preg1) ~ .-preg, data = df2)
+summary(reg2)
+@
+    The results are the same. Actually I set the $3^{rd}$ category of \texttt{preg} as the reference category to make them the same. After adjusting other factors, when nutrition status increases 1 unit, the odds of pregnancy duration in category 2 over category 3 will change by a factor of $e^{-0.046}$, and the odds of pregnancy duration in category 1 over category 3 will change by a factor of $e^{-0.065}$. Keeping other variables constant, when a mother's age change from age category 2 to age category 1, the odds of pregnancy duration in category 2 over category 3 will change by a factor of $e^{2.91}$. Similarly, interpretation for other parameters can be drawn according to the output.
+  % 3.
+    \item (8.2) The data in Table 8.5 are from an investigation into satisfaction with hous- ing conditions in Copenhagen (derived from Example W in Cox and Snell, 1981, from original data from Madsen, 1971). Residents in selected areas living in rented homes built between 1960 and 1968 were questioned about their satisfaction and the degree of contact with other residents. The data were tabulated by type of housing.\\
+        In addition, test whether there is interaction effect between “type of housing” and “contact with other neighbors” on the response variable “satisfaction.”\\[-25pt]
+    \begin{center}
+      \includegraphics[width=0.7\linewidth]{table.png}
+    \end{center}
+      \begin{enumerate}[a.]
+      % a.
+        \item Summarize the data using appropriate tables of percentages to show the associations between levels of satisfaction and contact with other residents, levels of satisfaction and type of housing, and contact and type of housing.
+<<3a, echo=FALSE>>=
+proptb1
+proptb2
+proptb3
+@
+
+      % b.
+        \item Use nominal logistic regression to model associations between level of satisfaction and the other two variables. Obtain a parsimonious model that summarizes the patterns in the data.
+<<3b>>=
+reg3 <- multinom(satisfaction ~ contact + type, weights = frequency, data = df3)
+summary(reg3)
+null <- multinom(satisfaction ~ 1, weights = frequency, data = df3)
+summary(null)
+@
+       \item[$\ast$] Test whether there is interaction effect between “type of housing” and “contact with other neighbors” on the response variable “satisfaction”.
+<<3c>>=
+full <-  multinom(satisfaction ~ contact*type, weights = frequency, data = df3)
+c('Chi^2' = reg3$dev-full$dev,'p-value' = 1-pchisq(reg3$dev-full$dev, 10))
+# Df=12-2
+@
+        The likelihood ratio test indicates no interaction effect between “type of housing” and “contact with other neighbors” on the response variable “satisfaction”.
+      \end{enumerate}
+\end{enumerate}
+\end{document}

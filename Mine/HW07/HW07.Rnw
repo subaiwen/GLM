@@ -1,0 +1,138 @@
+\documentclass[12pt,fleqn]{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.7}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amsthm,amssymb,scrextend}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\DeclareMathOperator{\rng}{Rng}
+\DeclareMathOperator{\dom}{Dom}
+\newcommand{\R}{\mathbb R}
+\newcommand{\cont}{\subseteq}
+\newcommand{\N}{\mathbb N}
+\newcommand{\Z}{\mathbb Z}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{amsmath}
+\usepackage[mathscr]{euscript}
+\let\euscr\mathscr \let\mathscr\relax% just so we can load this and rsfs
+\usepackage[scr]{rsfso}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{multicol}
+\usepackage[colorlinks=true, pdfstartview=FitV, linkcolor=blue,
+citecolor=blue, urlcolor=blue]{hyperref}
+
+\DeclareMathOperator{\arcsec}{arcsec}
+\DeclareMathOperator{\arccot}{arccot}
+\DeclareMathOperator{\arccsc}{arccsc}
+\newcommand{\ddx}{\frac{d}{dx}}
+\newcommand{\dfdx}{\frac{df}{dx}}
+\newcommand{\ddxp}[1]{\frac{d}{dx}\left( #1 \right)}
+\newcommand{\dydx}{\frac{dy}{dx}}
+\let\ds\displaystyle
+\newcommand{\intx}[1]{\int #1 \, dx}
+\newcommand{\intt}[1]{\int #1 \, dt}
+\newcommand{\defint}[3]{\int_{#1}^{#2} #3 \, dx}
+\newcommand{\imp}{\Rightarrow}
+\newcommand{\un}{\cup}
+\newcommand{\inter}{\cap}
+\newcommand{\ps}{\mathscr{P}}
+\newcommand{\set}[1]{\left\{ #1 \right\}}
+
+\usepackage{enumerate} % enable \begin{enumerate}[1.]
+\renewcommand{\labelenumi}{\alph{enumi}.} %first level: (a),(b)
+\renewcommand{\labelenumii}{\roman{enumii}.} %second level: i,ii
+
+\theoremstyle{definition}
+\newtheorem*{sol}{Solution}
+\newtheorem*{claim}{Claim}
+\newtheorem{problem}{}
+% ---------------------------------------------------------------------------------------------
+\begin{document}
+\lhead{GLM}
+\chead{Zhijian Liu}
+\rhead{\today}
+
+<<include=FALSE>>=
+# Set global chunk options
+opts_chunk$set(echo = T,
+               warning = F,
+               message = F,
+               cache = T)
+invisible(lapply(c("knitr","kableExtra","tidyverse","MASS"),library, character.only=TRUE))
+source("/Users/liubeixi/Desktop/GLM/hw/Mine/HW07/HW07.R")
+#1.
+df1 <- read.table("/Users/liubeixi/Desktop/GLM/Data/GLM_sample_txt/CH14TA13.txt")[,-1]
+colnames(df1) <- c("preg", "preg1", "preg2","preg3","nutri","age1","age3","alcohol","smoking")
+@
+
+% Just put your proofs in between the \begin{proof} and the \end{proof} statements!
+
+\section*{Homework \#7}
+% 1.
+	\begin{problem} \textit{\textbf{From Kutner et al., Applied Linear Regression Models, p. 609.}}\\[5pt]
+	Refer to the Pregnancy Duration Data (p. 609), repeat the analysis on p. 617 (the response variable is treated as Ordinal categorical and a proportional odds model is used) using R or other statistical software. Compare your results with the ones in the text (from Minitab). Are they the same? If not, what is the cause? Interpret the parameters in the context of the problem.
+<<1>>=
+df1$OrderedRes <- ordered(df1$preg, c("1", "2", "3"))
+polr_reg <- polr(OrderedRes ~ .-preg-preg1-preg2-preg3, data=df1 , Hess=T)
+summary(polr_reg)
+@
+  The signs of the coefficients are not the same because of different parameterization of two softwares. Keeping other predictors constant, as nutrition status increases 1 unit, the odds ratio that the mother is in a lower pregnancy category vs. a higher pregnancy category is $e^{-0.049} = 0.952$. After adjusted for other predictors, when a mother’s age change from age category 2 to age category 1, the odds of the mother is in a lower pregnancy category vs. a higher pregnancy category will change by a factor $e^{1.97601} = 7.214$. Similarly, interpretation for other parameters can be drawn according to the output.
+	\end{problem}
+% 2.
+  \begin{problem} \textit{\textbf{From Dobson \& Barnett, An Introduction to Generalized Linear Models, p. 163 Exercises 8.2 (c, d)}}\\[-20pt]
+  \begin{enumerate}[c.]
+  \item Do you think an ordinal model would be appropriate for associations between the levels of satisfaction and the other variables? Justify your answer. If you consider such a model to be appropriate, fit a suitable one and compare the results with those from (b).
+    \begin{itemize}
+      \item In part (c), use a proportional odds model without interaction. Then,
+<<2.1>>=
+attach(df2)
+df2$OrderedRes <- ordered(df2$satisfaction2, c("1", "2", "3"))
+polr_reg_sat <- polr(OrderedRes ~ contact + type, weights = frequency, data = df2)
+summary(polr_reg_sat)
+@
+        \begin{enumerate}[i.]
+          \item Conduct a Pearson goodness of fit test.
+<<2.1.1>>=
+df2 %>%
+  arrange(type, contact) -> df2
+observed<-matrix(df2$frequency, byrow=T, ncol=3)
+observed
+df3 <- df2 %>%
+  group_by(type, contact) %>%
+  summarise(n = sum(frequency))
+df3 <- df3[rep(row.names(df3), each = 3),]
+yhat<-predict(polr_reg_sat, type="probs")*df3$n
+yhat
+expected<-yhat[c(1:6)*3, ]
+expected
+rsp<-(observed-expected)/sqrt(expected)  # Standardized Pearson Residuals
+c("PearsonChiSq"=sum(rsp^2), "df" = 12-5,
+  "p-value"= 1-pchisq(sum(rsp^2), 12-5))
+
+@
+The p-value of the Pearson goodness of fit test is close to 0, so the model does not fit the data well.
+          \item Use Likelihood Ratio Test to test whether adding interaction improves the model.
+<<2.1.2>>=
+full <- polr(OrderedRes ~ contact * type, weights = frequency, data = df2)
+DevChi<-polr_reg_sat$dev - full$dev
+c("DevChiSq"=DevChi, "p-value"=1-pchisq(DevChi, 2))  # df=2
+@
+        $H_0$: $log(\frac{P(y \leq j)}{1-P(y \leq j)}) = \alpha_j - (\beta_1X_1 + beta_2X_2)$\\
+        $H_A$: $log(\frac{P(y \leq j)}{1-P(y \leq j)}) = \alpha_j - (\beta_1X_1 + beta_2X_2 + beta_3X_1X_2)$\\
+        Where $j = 1, 2, \cdots, (J-1)$
+        The p-value for this test is $0.045 < 0.05$, so we reject the null hypothesis and conclude that adding interaction improves the model.
+        \end{enumerate}
+      \item Note that in this case, the proportional odds model with interaction is NOT the saturated model.
+    \end{itemize}
+  \item From the best model you obtained in (c), calculate the standardized residuals and use them to find where the largest discrepancies are between the observed frequencies and expected frequencies estimated from the model.
+<<2.2>>=
+rsp
+df2
+@
+The prediction for the satisfaction of the house that is an apartment and has a low type contact has the largest discrepancy.
+
+  \end{enumerate}
+  \end{problem}
+\end{document}

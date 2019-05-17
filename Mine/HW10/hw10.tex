@@ -1,0 +1,120 @@
+\documentclass[12pt,fleqn]{article}
+\usepackage[]{graphicx}
+\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\usepackage{nccmath} % center align
+\usepackage{pifont} % check mark and cross
+\usepackage{array} % align table
+
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\usepackage{alltt}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.7}
+\usepackage[margin=1in]{geometry} 
+\usepackage{amsmath,amsthm,amssymb,scrextend}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\DeclareMathOperator{\rng}{Rng}
+\DeclareMathOperator{\dom}{Dom}
+\newcommand{\R}{\mathbb R}
+\newcommand{\cont}{\subseteq}
+\newcommand{\N}{\mathbb N}
+\newcommand{\Z}{\mathbb Z}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{amsmath}
+\usepackage[mathscr]{euscript}
+\let\euscr\mathscr \let\mathscr\relax% just so we can load this and rsfs
+\usepackage[scr]{rsfso}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{multicol}
+\usepackage[colorlinks=true, pdfstartview=FitV, linkcolor=blue,
+citecolor=blue, urlcolor=blue]{hyperref}
+\usepackage{enumerate}
+
+\DeclareMathOperator{\arcsec}{arcsec}
+\DeclareMathOperator{\arccot}{arccot}
+\DeclareMathOperator{\arccsc}{arccsc}
+\newcommand{\ddx}{\frac{d}{dx}}
+\newcommand{\dfdx}{\frac{df}{dx}}
+\newcommand{\ddxp}[1]{\frac{d}{dx}\left( #1 \right)}
+\newcommand{\dydx}{\frac{dy}{dx}}
+\let\ds\displaystyle
+\newcommand{\intx}[1]{\int #1 \, dx}
+\newcommand{\intt}[1]{\int #1 \, dt}
+\newcommand{\defint}[3]{\int_{#1}^{#2} #3 \, dx}
+\newcommand{\imp}{\Rightarrow}
+\newcommand{\un}{\cup}
+\newcommand{\inter}{\cap}
+\newcommand{\ps}{\mathscr{P}}
+\newcommand{\set}[1]{\left{ #1 \right}}
+
+\renewcommand{\labelenumi}{\roman{enumi}.} %first level: (a),(b)
+\renewcommand{\labelenumii}{\roman{enumii}.} %second level: i,ii
+\theoremstyle{definition}
+\newtheorem*{sol}{Solution}
+\newtheorem*{claim}{Claim}
+\newtheorem{problem}{}
+% ---------------------------------------------------------------------------------------------
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+\lhead{GLM}
+\chead{Zhijian Liu}
+\rhead{} %\today
+
+% Just put your proofs in between the \begin{proof} and the \end{proof} statements!
+
+\section*{Homework \#10}
+\textbf{\textit{Study 1: Air traffic control}}
+% 1.
+	\begin{enumerate}
+		\item Distribution of response variable: Poisson distribution, with $log$ link function.
+		\item Model: $log(\mbox{Errors}) = log(\mbox{Population}) + \beta_0 + \beta_1 \cdot \mbox{Exp} + \beta_2 \cdot \mbox{Age} $
+		\item To address the research questions:
+			\begin{enumerate}[(1)]
+				\item Check the significance of the coefficient of Age or Exp to see if an ATCS's age or experience have an effect on the occurrence of en route operational errors. 
+				\item Keep the significant predictors in the model. Use the LRT to test if an interaction term between the ATCS's age and experience should be included in the model.
+			\end{enumerate}
+	\end{enumerate}
+% 2.
+\textbf{\textit{Study 2: Personal Space}}
+	\begin{enumerate}
+		\item Distribution of response variable: Binomial distribution, with $logit$ link function.
+		\item Model: $log\frac{P(Response=Yes)}{P(Response=No)}$ vs (Density) * (Sex of Subject) * (Sex of Intruder)\\
+			  Where $(Density) * (Sex of Subject) * (Sex of Intruder) $ includes these three variables, their two-way interaction term and three-way interaction term.
+		\item To address the research questions: Check the significance of the coefficients of the terms.
+	\end{enumerate}
+% 3.
+\textbf{\textit{Study 3: Lung Cancer treatment}}
+	\begin{enumerate}
+		\item Distribution of response variable: Multinomial distribution, with $logit$ link function.
+		\item Proportional odds model: $log\frac{P(Response\leq j)}{P(Response > j)} = \beta_0 + \beta_1 \cdot \mbox{Treatment} + \beta_2 \cdot \mbox{Sex}$\\
+			  Where $ j = 1,2,3$. And from low to high progressive disease = 1, No change = 2, Partial remission = 3, Complete remission = 4. 
+		\item To address the research questions: Use the model to estimate the probabilities for each response category. Check the significance of the coefficients of the predictors. 
+	\end{enumerate}
+% 4.
+\textbf{\textit{Study 4. The effect of distraction}}
+	\begin{enumerate}
+		\item Distribution of response variable: Exponential distribution, with $log$ link function.
+		\item Model: $log(Time) = \beta_0 + \beta_1 \cdot \mbox{Experience} + \beta_2 \cdot \mbox{Gender} + \beta_3 \cdot \mbox{Treatments}$\\
+		\item To address the research questions: Censor the data from those who failed the coding task to build a survival object for the model. Set distraction type \textit{no noise} as baseline, and check the coefficient for each dummy variable for distraction type to investigate whether, and how, the distraction from music or noise may affect the response variable.
+	\end{enumerate}
+% 5.
+\textbf{\textit{Study 5. Low birthweight}}
+	\begin{enumerate}
+		\item Distribution of response variable \texttt{LOW}: Binomial distribution, with $probit$ link function.
+		\item Model: $log\frac{P(LOW=1)}{P(LOW=0)} = \beta_0 + \beta_1 \cdot \mbox{AGE} + \beta_2 \cdot \mbox{LWT} + \beta_3 \cdot \mbox{RACE} + \beta_4 \cdot \mbox{SMOKE} + \beta_5 \cdot \mbox{PTL} + \beta_6 \cdot \mbox{HT} + \beta_7 \cdot \mbox{UI}+ \beta_8 \cdot \mbox{FTV}$\\
+		\item To address the research questions: Check the significance of the coefficient of each variable in the model.
+	\end{enumerate}
+\end{document}
