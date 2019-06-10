@@ -1,0 +1,306 @@
+---
+title: \Large\textbf{Midterm}
+author: \normalsize{Zhijian Liu}
+geometry: margin=0.7in
+output:
+  pdf_document:
+    df_print: kable
+    highlight: haddock
+    toc_depth: 1
+fontsize: 12pt
+header-includes:
+  - \usepackage{leading}
+  - \leading{18pt}
+mainfont: Times New Roman
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+invisible(lapply(c("pander","tidyverse","GGally","boot","ggfortify","gridExtra"),library, character.only=TRUE))
+# data
+df <- read.table('/Users/liubeixi/Documents/2019 spring/GLM/Midterm/dataset/HBP_Smoking.txt', header = T)
+  # SEQN: Respondent Identification Number
+  # Age: Respondent’s age in years
+  # Sex: 0 = Female, 1 = Male
+  # Race: 1 = White, 2 = Black, 3 = Other
+  # WeightLbs: Respondent’s weight in pounds
+  # HeightIn: Respondent’s height in inches
+  # Smoke: 1 = Never smoked, 2 = Used to smoke, but not any more, 3 = Used to smoke, and still smoke
+  # HBP: 0 = Not high blood pressure, 1 = high blood pressure
+df[,c(4,7)] <- lapply(df[,c(4,7)], as.factor)
+attach(df)
+```
+\vspace{-1.2cm}
+#### Project 2: Smoking and Blood Pressure
+\vspace{-0.8cm}
+#### 1. Data overview
+\vspace{-0.2cm}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;In this project, we are interested in the relationship between Smoking and High Blood Pressure. Here, \texttt{HBP}, High Blood Pressure, will be the response variable, and Smoking, \texttt{SMOKE}, will be one of the predictors. Also the interaction between \texttt{Smoking} and other predictors, such as \texttt{Age}, \texttt{Sex}, \texttt{Race}, \texttt{WeightLbs} and \texttt{HeightIn}, is also of our interest.  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;In the dataset, there are 16441 observations and 8 variables, one of which is Respondent Identification Number, not of our interest. I start with an overview of the data.
+```{r pairs, fig.align="center"}
+ggpairs(df ,columns = 2:8, mapping = aes(color = factor(HBP)))
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;I notice that the distribution of \texttt{WeightLbs} is skewed. A transformation on it could help to bulid a model with a better fit. So I apply logarithm to this variable. After the transformation, the distribution is roughly normal distributed.
+```{r trans.weight, fig.align="center", out.width = "40%"}
+plot1 <- ggplot(df, aes(x = WeightLbs)) +
+  geom_density(fill = '#56B4E9')
+plot2 <- ggplot(df, aes(x = log(WeightLbs))) +
+  geom_density(fill = '#56B4E9')
+gridExtra::grid.arrange(plot1,plot2,ncol=2)
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;There is some relationship between predictors. For instance, \texttt{WeightLbs} have positive relationship with \texttt{HeightIn}. It is a natural relationship, since the taller a person is, the heavier he/she would be. But since our interest is to investigate the relationship between \texttt{SMOKE} and \texttt{HBP}, I will not dig into the relationship between other predictors. Because, the relationship between other predictors will not significantly affect the effect of \texttt{SMOKE} on \texttt{HBP}.  
+```{r weight vs height, fig.align="center", out.width = "40%", eval=FALSE}
+ggplot(df, aes(x = log(WeightLbs), y = HeightIn)) +
+  geom_point(color = '#999999')
+```
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Initially, we can have a look at a plot to have a sense of the association between \texttt{SMOKE} on \texttt{HBP}. The boxplot shows no obvious difference between group 2 in \texttt{SMOKE}, people used to smoke, but not any more, and group 3, people still smoke. But the proportion of peole who has high blood pressure in group 1 is apparently lower than that of other two groups. So, I would now consider that people who had smoked are more likely to have high blood pressure.
+```{r Smoke vs. HBP, fig.align="center", out.width = "40%"}
+ggplot(df, aes(x = SMOKE, fill = factor(HBP))) +
+  geom_bar(stat = 'count' , position = 'stack', width = 0.7) +
+  scale_fill_discrete(name = 'HBP')
+```
+\vspace{-0.8cm}
+#### 2. Model
+\vspace{-0.8cm}
+#####  2.1 Model Selection
+\vspace{-0.2cm}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;To initialize a model, I will put all 6 variables i have into the model for the reason that there are a large number of observations in the dataset. Our response variable \texttt{HBP} has 0, 1 values, which follows a Bernoulli distribution. So a logistic regression model will be applicable. Futhermore, prior knowledge tells that blood pressure itself is normally distributed in the population. In other word, the binary outcome, HBP, depends on a hidden normal distributed variable. It will be proper to use *Probit* link function in the logistic model. Here, the initial model is:
+  \begin{align*}
+  \Phi^{-1}(\pi) = &\beta_0 + \beta_1(Age) + \beta_2(Sex= 2) + \beta_3(Race = 2) + \beta_4(Race = 3) + \beta_5(WeightLbs)  +  \\ &\beta_6(HeightIn) + \beta_7(SMOKE = 2) +  \beta_8(SMOKE = 3)
+  \end{align*}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Then I utilize stepwise model selection algorithm using AIC as criteria to determine the best subset of the initial model. The initial model itself turns out to be the best subset. Hence, I keep all the predictors.
+```{r stepwise, results=FALSE}
+null <- glm(HBP ~ 1, family =  binomial(link = probit), data = df)
+full <- glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE, family =  binomial(link = probit), data = df)
+step(full, scope = list(upper=full,lower = null), direction = 'both') # full model is best
+```
+\vspace{-0.5cm}
+##### 2.2 Diagnostics  
+**2.2.1 Residual plot**  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;I check the adequacy of the model with residual plots.
+```{r resi.plot, fig.align="center"}
+reg.probit  <- glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE, family =  binomial(link = probit), data = df)
+reg.logit  <- glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE, family =  binomial(link = logit), data = df)
+reg.cloglog  <- glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE, family =  binomial(link = cloglog), data = df)
+reg <- list(reg.probit, reg.logit, reg.cloglog)
+res.plot.rp <- res.plot.rd <- list(rep(null, 3))
+title <- c('probit', 'logistic', 'cloglog')
+for (i in 1:3){
+  reg.diag <- boot::glm.diag(reg[[i]])
+  p.hat <- reg[[i]]$fitted  # Estimated probability
+  # Get studentized Pearson residuals
+  rd <- reg.diag$rd  # Standardized Deviance Residuals
+  rp <- reg.diag$rp  # Stdardized Person Residual
+  cook <- reg.diag$cook  # Cook's D
+  h <- reg.diag$h  # Leverages
+  # residual plot
+  resi.diag <- data.frame(p.hat, rd, rp, cook, h)
+  # residual plots --> flat loess line
+  res.plot.rp[[i]] <- ggplot(resi.diag, aes(x = p.hat, y = rp)) +
+    geom_point(size = 0.5) +
+    geom_smooth(method = loess, se= FALSE, size = 0.5) +
+    xlab('Estimated probability') +
+    ylab('Pearson residual') +
+    ggtitle(title[i])
+  res.plot.rd[[i]] <- ggplot(resi.diag, aes(x = p.hat, y = rd)) +
+    geom_point(size = 0.5) +
+    geom_smooth(method = loess, se= FALSE, size = 0.5) +
+    xlab('Estimated probability') +
+    ylab('Deviance residual')
+}
+gridExtra::grid.arrange(res.plot.rp[[1]],res.plot.rp[[2]],res.plot.rp[[3]],
+                        res.plot.rd[[1]],res.plot.rd[[2]],res.plot.rd[[3]],ncol=3)
+```
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The plots confirm that my probit model performs better than the models using logit link and complementary log-log link. The roughly flat lowess line validates this correct model.  
+
+**2.2.2 Outliers and Influential Cases**  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Outliers could significantly undermine the quality of a model. Here I try to detect the influential outliers.
+```{r outlier, fig.align="center"}
+reg <- glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE, family =  binomial(link = probit), data = df)
+p <- 7
+n <- nrow(df)
+reg.diag <- boot::glm.diag(reg)
+p.hat <- reg$fitted  # Estimated probability
+# Get studentized Pearson residuals
+rd <- reg.diag$rd  # Standardized Deviance Residuals
+rp <- reg.diag$rp  # Stdardized Person Residual
+cook <- reg.diag$cook  # Cook's D
+h <- reg.diag$h  # Leverages
+dChi <- rp^2  # Change in Pearson Chi-square
+ddev<-h*rp^2+residuals(reg)^2 # Change in Deviance
+resi.diag <- data.frame(p.hat, rd, rp, cook, h, dChi, ddev )
+resi.diag <- cbind(rownames(resi.diag), resi.diag)
+names(resi.diag)[1] <- 'index'
+# leverage plot
+leverage.plot <- ggplot( resi.diag , aes(x = as.numeric(index), y =h, color = h)) +
+  geom_point(size = 0.5) +
+  scale_color_gradient(low="#cccccc", high="#212121") +
+  geom_abline(intercept =  12*p/n, slope = 0, color = "#aaaaaa", lty =2) +
+  geom_text(data = resi.diag[h>12*p/n,], aes(label = as.numeric(index)), vjust = -.5, size = 2.5 ) +
+  xlab('index') + guides(color=FALSE)
+# Cook's distance
+cook.plot <- ggplot( resi.diag , aes(x = as.numeric(index), y =cook, color = cook)) +
+  geom_point(size = 0.5) +
+  scale_color_gradient(low="#cccccc", high="#212121", name = NULL, breaks = c(0.001,0.003), labels = c('Low', 'High')) +
+  geom_abline(intercept =  70*mean(cook), slope = 0, color = "#aaaaaa", lty =2) +
+  geom_text(data = resi.diag[cook > 70*mean(cook),], aes(label = as.numeric(index)), vjust = -.5, size = 2.5 ) +
+  xlab('index')
+# Chi-sq & Cook's
+dchi.plot <- ggplot( resi.diag , aes(x = p.hat, y =dChi, size = cook, label = as.numeric(index))) +
+  geom_point(shape=1, color = "#212121") +
+  geom_text(data = resi.diag[cook > 70*mean(cook),], hjust = -0.6, size = 2.5 ) +
+  guides(size=FALSE) +
+  ylab('Change in Chi-square')
+# Dev & Cook's
+ddev.plot <- ggplot( resi.diag , aes(x = p.hat, y =ddev, size = cook, label = as.numeric(index))) +
+  geom_point(shape=1, color = "#212121") +
+  geom_text(data = resi.diag[cook > 70*mean(cook),], hjust = -0.6, size = 2.5 ) +
+  scale_size_continuous(breaks = c(0.001,0.003), labels = c('Low', 'High')) +
+  ylab('Change in Deviance')
+# plot
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+grid.arrange(arrangeGrob(leverage.plot + theme(legend.position="none"), cook.plot + theme(legend.position="none"),
+                               dchi.plot + theme(legend.position="none"), ddev.plot + theme(legend.position="none"),
+                               nrow=2),
+                   arrangeGrob(g_legend(cook.plot),g_legend(ddev.plot), nrow =2), ncol=2, widths = c(9.5,1))
+# delete 5390, 7378
+# new 240
+df <- df[-240,]
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The plots of different statistics share a consistent suggestion that the $240^{th}$ observation is the most influential cases to the model. I remove this observations from the data set to improve the fitness of the model.  
+
+**2.2.3 Goodness of fit test**  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;After modifying the data, I fit the model again and use Hosmer-Lemeshow test to test the goodness of fit of this model. The p-value of the test is closed to 0, which indicates lack of fit of the data. So adding flexibility to the model could help to improve the model.
+```{r gof}
+reg <- glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE, family =  binomial(link = probit), data = df)
+p.hat <- reg$fitted
+hosmerlem<-function(y, yhat, g = 10)
+{
+  cutyhat <- cut(yhat, breaks = quantile(yhat, probs = seq(0, 1, 1/g)), include.lowest = T)
+  obs <- xtabs(cbind(1 - y, y) ~ cutyhat)
+  expect <- xtabs(cbind(1 - yhat, yhat) ~ cutyhat)
+  chisq <- sum((obs - expect)^2/expect)
+  P <- 1 - pchisq(chisq, g - 2)
+  c("X^2" = chisq, Df = g - 2, "P(>Chi)" = P)
+}
+pander::pander(hosmerlem(df$HBP, p.hat, g=10))
+```
+\vspace*{-1cm}
+##### 2.3 Interaction terms
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;It is of interest for this study to evaluate whether the effect of \texttt{SMOKE} on \texttt{HBP} is the same for different gender, race, or age. A more flexible model that includes interaction term can be considered, especially the sample size is large in this case. To determine whether I should include an interaction term in the model, I implement a Likelihood Ratio Test (LRT) for the full and reduced model:\newline
+  Reduced: $\Phi^{-1}(\pi) = \beta_0 + \beta_1(Age) + \beta_2(Sex= 2) + \beta_3(Race = 2) + \beta_4(Race = 3) + \beta_5(WeightLbs) +\beta_6(HeightIn) + \beta_7(SMOKE = 2) +  \beta_8(SMOKE = 3)$\newline
+  Full: Reduced model + $2^{nd}$ order interaction terms between \texttt{SMOKE} and other 5 variables.\newline
+  $H_0$: No interaction between \texttt{SMOKE} and other 5 variables.\newline
+  $H_A$: At least 1 of the other 5 variables have interaction with \texttt{SMOKE}.
+```{r}
+full <- glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE + I(log(WeightLbs)):SMOKE + HeightIn:SMOKE +
+              Age:SMOKE + Sex:SMOKE + Race:SMOKE, family =  binomial(link = probit), data = df)
+reduced <- glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE, family =  binomial(link = probit), data = df)
+G2 <- reduced$dev - full$dev
+knitr::kable(cbind('G2' = G2, 'p-value' = 1-pchisq(G2, 2)))
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The p-value of LRT is closed to 0, so I reject the null hypothesis and conclude that at least 1 of the other 5 variables have interaction with \texttt{SMOKE}. But which variable(s) have interaction with \texttt{SMOKE}? I am not sure. So next, I simultaneously run 5 LRTs to detect significant interaction. In each LRTs, I add one interaction term, \texttt{SMOKE} with 1 of the other 5 variables, to the same reduced model. Meanwhile, to control the confidence level of the whole family, Bonferroni method is applied. Thus, the significance level for each level is $0.05/5 = 0.01$.
+```{r bonfer}
+# 5 test, sig.lv = 0.01
+fulls <- list(glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE + Age:SMOKE , family =  binomial(link = probit), data = df),
+              glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE + Sex:SMOKE , family =  binomial(link = probit), data = df),
+              glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE + Race:SMOKE , family =  binomial(link = probit), data = df),
+              glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE + I(log(WeightLbs)):SMOKE , family =  binomial(link = probit), data = df),
+              glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE + HeightIn:SMOKE , family =  binomial(link = probit), data = df))
+p.value <- G2 <-  rep(NA,5)
+for (i in 1:5){
+  G2[i] <- reduced$dev - fulls[[i]]$dev
+  p.value[i] <- 1-pchisq(G2[i], 2)
+}
+interact <- rbind(G2, p.value)
+colnames(interact) <- c('Age:SMOKE', 'Sex:SMOKE', 'Race:SMOKE', 'log(WeightLbs):SMOKE', 'HeightIn:SMOKE')
+knitr::kable(interact)
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;It turns out that all these LRTs have p-values > 0.01. In other words, none of the interaction terms is significant when other terms are in the model. But to keep the consistency with the previous LRT, I retain the interaction term \texttt{(Race)*(SMOKE)}, which has the lowest p-value closed to 0.01.  
+
+**2.4 Validation**  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Given the large sample size,it is reasonable to try cross validation to test the performance of the new model with interaction term. I randomly seperate the data into 2 equal size sets, training set and testing set. Then I fit the model in the trainging set, and measure the performance of the model in the testing set. I use the area under ROC curve as the measurement.\newline
+```{r roc, fig.align="center", out.width = "60%"}
+# ROC
+set.seed(666)
+n <- nrow(df)
+z <- sample(n, n/2)
+roc.analysis <-function (object, newdata = NULL)
+{
+  if (is.null(newdata)) {
+    pi.tp <- object$fitted[object$y == 1]
+    pi.tn <- object$fitted[object$y == 0]
+  }
+  else {
+    pi.tp <- predict(object, newdata, type = "response")[newdata$y == 1]
+    pi.tn <- predict(object, newdata, type = "response")[newdata$y == 0]
+  }
+
+  pi.all <- sort(c(pi.tp, pi.tn))
+  sens <- rep(1, length(pi.all)+1)
+  specc <- rep(1, length(pi.all)+1)
+  for (i in 1:length(pi.all)) {
+    sens[i+1] <- mean(pi.tp >= pi.all[i], na.rm = T)
+    specc[i+1] <- mean(pi.tn >= pi.all[i], na.rm = T)
+  }
+
+  npoints <- length(sens)
+  area <- sum(0.5 * (sens[-1] + sens[-npoints]) * (specc[-npoints] -
+                                                     specc[-1]))
+  lift <- (sens - specc)[-1]
+  cutoff <- pi.all[lift == max(lift)][1] # cutoff that make largest difference between spec and sens
+  sensopt <- sens[-1][lift == max(lift)][1]
+  specopt <- 1 - specc[-1][lift == max(lift)][1]
+
+  list(pihat=as.vector(pi.all), sens=as.vector(sens[-1]),
+       spec=as.vector(1-specc[-1]), area = area, cutoff = cutoff,
+       sensopt = sensopt, specopt = specopt)
+}
+# training
+full <- glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE + Race:SMOKE, family =  binomial(link = probit), data = df[z,])
+reduced <- glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE, family =  binomial(link = probit), data = df[z,])
+# validation
+validation <- df[-z,]
+validation$y <- validation$HBP
+validationROC.1<-roc.analysis(reduced, newdata=validation)
+validationROC.2<-roc.analysis(full, newdata=validation)
+df.roc.1 <- data.frame('TPR' = validationROC.1$sens, 'FPR' = 1 - validationROC.1$spec,
+                       'Model' = rep('Model without interaction',length(validationROC.1$sens)))
+df.roc.2 <- data.frame('TPR' = validationROC.2$sens, 'FPR' = 1 - validationROC.2$spec,
+                       'Model' = rep('Model with interaction',length(validationROC.2$sens)))
+df.roc <- rbind(df.roc.1, df.roc.2)
+
+ggplot() +
+  geom_line( data = df.roc, aes(x = FPR, y = TPR, color = Model, alpha = Model)) +
+  geom_abline(intercept = 0, slope = 1, lty = 2)+
+  scale_alpha_discrete(range=c(1, 0.5)) +
+  xlab('1 - specificity') +
+  ylab('sensitivity')
+# they are identical
+auc <- cbind('Model without interaction' = validationROC.1$area,'Model with interaction'= validationROC.2$area)
+rownames(auc) <- 'AUC'
+knitr::kable(auc)
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The ROC curve of two models under validation method are identical. Also, their AUC, area under the curve, is also very closed to each other. That means, the addition of the interaction term does not make contribution to the performance of the model. To avoid the redundancy of the model, it is advisable to drop this interaction term.\newline
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;As the result, the finalized model is the same as the initial model:
+  \begin{align*}
+  \Phi^{-1}(\pi) = &\beta_0 + \beta_1(Age) + \beta_2(Sex= 2) + \beta_3(Race = 2) + \beta_4(Race = 3) + \beta_5(WeightLbs)  +  \\ &\beta_6(HeightIn) + \beta_7(SMOKE = 2) +  \beta_8(SMOKE = 3)
+  \end{align*}
+  
+#### 3. Conclusion
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;High blood pressure is associated with smoking. Keeping other factors constant, the people who smoke are more likely to have high blood pressure than those who do not smoke or who used to smoke but stopped. This association does not significantly vary among different age, race, etc.  
+In the following output, i relevel \texttt{SMOKE} as the baseline.  
+```{r conclu}
+df$SMOKE <- relevel(df$SMOKE, "3")
+reg <-  glm(HBP ~ Age + Sex + Race + I(log(WeightLbs)) + HeightIn + SMOKE, family =  binomial(link = probit), data = df)
+pander(summary(reg))
+```
